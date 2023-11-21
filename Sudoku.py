@@ -133,10 +133,28 @@ class Sudoku:
             grid = self._trim()
             metDifficulty = True
             #TODO: Add a difficulty check.
+        
+            #if board.findDifficulty(board) = difficulty:
+                #metDifficulty = True
+        
         self.setBoard(board)
               
         return board
-        
+
+    #Returns the difficulty of a given board
+    def findDifficulty(Board board):
+        grid = board.getGrid()
+        emptyCell = 0
+        for i in range(0, len(grid):
+            emptyCell += grid[i].count("None")
+        if emptyCell >= 54:
+            return "hard"
+        elif emptyCell >= 46:
+            return "medium"
+        else:
+            return "easy"
+            
+    
     #BUG: Sometimes this function gets stuck and is unable to return a value.
     def _createFullGrid(self, size: tuple[int]):
        
