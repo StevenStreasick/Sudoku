@@ -142,7 +142,7 @@ class Sudoku:
         return board
 
     #Returns the difficulty of a given board
-    def findDifficulty(Board board):
+    def findDifficulty(board : type[Board.Board]):
         grid = board.getGrid()
         emptyCell = 0
         for i in range(0, len(grid):
