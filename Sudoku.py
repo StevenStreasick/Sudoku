@@ -145,7 +145,7 @@ class Sudoku:
     def findDifficulty(board : type[Board.Board]):
         grid = board.getGrid()
         emptyCell = 0
-        for i in range(0, len(grid):
+        for i in range(0, len(grid)):
             emptyCell += grid[i].count("None")
         if emptyCell >= 54:
             return "hard"
