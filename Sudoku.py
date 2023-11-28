@@ -79,6 +79,12 @@ def getValidCellValues(grid : list[list[type[Cell.Cell]]], pos : tuple[int]) -> 
 
     return list(validRowValues & validColValues & validSubValues)
 
+def createCell(val : int) -> type[Cell.Cell]:
+        cell = Cell.Cell(val)
+        cell.lock()
+
+        return cell
+
 
 class Sudoku:
 
@@ -138,6 +144,8 @@ class Sudoku:
         self.setBoard(board)
               
         return board
+    
+    
         
     #Returns the difficulty of a given board
     def findDifficulty(self):
@@ -171,7 +179,7 @@ class Sudoku:
 
             while len(availableMoves) > 0:
                 i = random.randint(0, len(availableMoves) - 1)
-                grid[pos[0]][pos[1]] = Cell.Cell(availableMoves[i])
+                grid[pos[0]][pos[1]] = createCell(availableMoves[i])
                 
                 #As long as each number that we has still maintains at least one valid sol, then 
                 #the end Grid will be a unique solution.
@@ -249,7 +257,7 @@ class Sudoku:
                         if num == 0:
                             row.append(None)
                         else:
-                            row.append(Cell.Cell(int(readRow[i])))
+                            row.append(createCell(int(readRow[i])))
 
                 grid.append(row)
                 readRow = f.readline()

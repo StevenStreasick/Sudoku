@@ -13,8 +13,8 @@ IUNTILPERGE = 200
 def getValidGenes(grid, pos : tuple[int]):
     validGenes = []
 
-    for i in range(1, len(grid)):
-        validGenes.append(i)
+    for i in range(0, len(grid)):
+        validGenes.append(i + 1)
 
     for i in range(pos[0] - (pos[0] % 3), pos[0] - (pos[0] % 3) + 3):
         for j in range(pos[1] - (pos[1] % 3), pos[1] - (pos[1] % 3) + 3):
@@ -32,7 +32,7 @@ def generateChromosome(grid):
 
     for i in range(0, len(chromosome)):
         for j in range(0, len(chromosome[i])):
-            if not (chromosome[i][j] == None or chromosome[i][j].isLocked()):
+            if  chromosome[i][j] == None or not chromosome[i][j].isLocked():
                 validGenes = getValidGenes(chromosome, (i, j))
                 selectedGene = validGenes[random.randint(0, len(validGenes) - 1)]
                 chromosome[i][j] = Cell.Cell(selectedGene)
@@ -51,17 +51,18 @@ def fitness(grid):
             if i == 0:
                 foundColValues.append([])
         
-            foundVal = grid[i][j] #Might have to adjust this line based on what the grid is.
-        
-            if foundVal in foundRowValues:
-                penalty += 1
-            else:
-                foundRowValues.append(foundVal)
+            
+            if not grid[i][j] == None:
+                foundVal = grid[i][j].getCellValue()
+                if foundVal in foundRowValues:
+                    penalty += 1
+                else:
+                    foundRowValues.append(foundVal)
 
-            if foundVal in foundColValues[j]:
-                penalty += 1
-            else:
-                foundColValues[j].append(foundVal)
+                if foundVal in foundColValues[j]:
+                    penalty += 1
+                else:
+                    foundColValues[j].append(foundVal)
 
     if penalty == 0:
         return 0
@@ -221,9 +222,9 @@ def Solve(sudoku : type[Sudoku.Sudoku]):
 
     lastBest = None
     lastProdGen = 0;
-
+    best = fitness(getElite(p))
     #I want the loop to exit when one of the conditions is false. When one condition false, return false
-    while (not fitness(getElite(p)) == 0) and i < MAX_ITERATIONS:
+    while (not best == 0) and i < MAX_ITERATIONS:
         newP.append(getElite(p))
 
         while len(newP) < POPULATION_SIZE:
@@ -262,3 +263,4 @@ def Solve(sudoku : type[Sudoku.Sudoku]):
         #Else, reset flag
         
         #If flag is over rho, then purge
+
