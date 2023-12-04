@@ -2,11 +2,13 @@ import random
 import Board
 import Cell
 import Backtracking
+import math
 
 validValues = {1, 2, 3, 4, 5, 6, 7, 8, 9}
 
 
 @staticmethod
+#Determines whether a grid follows the constraints of Sudoku or not
 def isValid(grid : list[list[type[Cell.Cell]]]) -> bool:
     row = []; col = []; subgrid = []
 
@@ -18,22 +20,24 @@ def isValid(grid : list[list[type[Cell.Cell]]]) -> bool:
     for i in range(0, len(grid)):
         for j in range(0, len(grid[i])):
             if not grid[i][j] == None:
-                if not grid[i][j].getCellValue() in validValues:
+                cellVal = grid[i][j].getCellValue()
+                subgridIndex = (math.floor(j / 3)) + (math.floor(i / 3) * 3)
+                if not cellVal in validValues:
                     return False
-                if grid[i][j] in row[j]:
+                if cellVal in row[i]:
                     return False
-                if grid[i][j] in col[i]:
+                if cellVal in col[j]:
                     return False
-                if grid[i][j] in subgrid[j % 3 + (i % 3 * 3)]:
+                if cellVal in subgrid[subgridIndex]:
                     return False
                 
-                row[j].append(grid[i][j])
-                col[i].append(grid[i][j])
-                subgrid[j % 3 + (i % 3 * 3)].append(grid[i][j])
+                row[i].append(cellVal)
+                col[j].append(cellVal)
+                subgrid[subgridIndex].append(cellVal)
     return True
 
 
-#I want Sudoku class to apply the constraints of Sudoku to the grid. 
+#Returns a list of positions that have no value associated with them within the grid.
 @staticmethod
 def getUnfilledPositions(grid : list[list[type[Cell.Cell]]]) -> list[tuple[int]]:
     unfilledPositions = []
@@ -46,7 +50,7 @@ def getUnfilledPositions(grid : list[list[type[Cell.Cell]]]) -> list[tuple[int]]
     return unfilledPositions
 
 
-#Returns the values that the specific cell can be.
+#Returns the values that the specific cell can be based on the constraints of Sudoku.
 @staticmethod
 def getValidCellValues(grid : list[list[type[Cell.Cell]]], pos : tuple[int]) -> list[int]:
 
@@ -77,17 +81,21 @@ def getValidCellValues(grid : list[list[type[Cell.Cell]]], pos : tuple[int]) -> 
             if not v == None and v.getCellValue() in validSubValues:
                 validSubValues.remove(v.getCellValue())
 
+    #Return the intersection of the valid values.
     return list(validRowValues & validColValues & validSubValues)
 
+#Creates a new, locked cell. 
 def createCell(val : int) -> type[Cell.Cell]:
         cell = Cell.Cell(val)
         cell.lock()
 
         return cell
 
-
+#Applies the constraints of Sudoku to the board class
 class Sudoku:
-
+    #Creates a new Sudoku class. 
+    #NOTE: The user must still set up the board for the Sudoku class. This can be done by calling
+    #setBoard, createEmptyBoard, or createBoard
     def __init__(self, difficulty : str = "Easy", size : tuple[int] = (9, 9)):
         #Contains a 'Has a' OOP structure instead of 'Is a'
         self._board = None
@@ -96,9 +104,10 @@ class Sudoku:
 
     #Uses a backtrack algorithm to determine if there exists a unique solution
     def _isUnique(self) -> bool:
-        #Call upon a backtracking class to then implement a backtrack on the board.
         return Backtracking.isGridUnique(self._board.getGrid()) 
     
+    #Sets the board variable to the passed board. 
+    #NOTE: board must be a valid sudoku board. 
     def setBoard(self, board : type[Board.Board]):
         if not type(board) == type(Board.Board()):
             raise TypeError(board)
@@ -107,11 +116,18 @@ class Sudoku:
 
         self._board = board
         
-    
+    #Returns the current board
     def getBoard(self) -> type[Board.Board]:
         return self._board
+    
+    #Sets the current board to an empty board.
+    def createEmptyBoard(self, size : tuple[int] = (9, 9)):
+        
+        self.setBoard(Board.Board(size))
 
-    #Creates a full, or near full grid. 
+
+
+    #Creates a full grid. 
     def createBoard(self, difficulty : str = "easy", size : tuple[int] = (9, 9)):
         difficulties = ["easy", "medium", "hard"]
 
@@ -130,17 +146,27 @@ class Sudoku:
 
         metDifficulty = False
         board = None
+        isPuzzleValid = False
         
-        while not metDifficulty:
+        #NOTE: Because of time constraints with generating puzzles, we chose to exlude difficulty
+        #Continue to create puzzles until a puzzle with that difficulty is made. 
+        while not metDifficulty and not isPuzzleValid:
             board = Board.Board(size)
+            #Best to ensure that a valid grid is actually created. 
             grid = self._createFullGrid(size)
-            board.setGrid(grid)
-            self.setBoard(board)
-            grid = self._trim()
-            metDifficulty = True
-            #if board.findDifficulty(board) = difficulty:
-                #metDifficulty = True
-            #TODO: Add a difficulty check.
+
+            
+            if Sudoku.isValid(grid):
+                isPuzzleValid = True
+                board.setGrid(grid)
+                self.setBoard(board)
+
+                grid = self._trim()
+                metDifficulty = True
+
+                #if board.findDifficulty(board) = difficulty:
+                    #metDifficulty = True
+
         self.setBoard(board)
               
         return board
@@ -148,10 +174,13 @@ class Sudoku:
     
         
     #Returns the difficulty of a given board
+    #NOTE: There are many, many factors that go into difficulty, and this is a very rudimentary 
+    #      difficulty checker
     def findDifficulty(self):
         grid = self.getBoard().getGrid()
         emptyCell = 0
         
+        #For each row, sum the number of occurances of 'None'
         for i in range(0, len(grid)):
             emptyCell += grid[i].count("None")
 
@@ -162,21 +191,25 @@ class Sudoku:
         else:
             return "easy"
 
-    #BUG: Sometimes this function gets stuck and is unable to return a value.
+    #Generates a full grid.
+    #NOTE: I have found evidence to suggest that a bug may exist in the performance of creating grids
+    #      but I have no reason to suspect this affected test results 
+    #Took inspiration from https://stackoverflow.com/questions/6924216/how-to-generate-sudoku-boards-with-unique-solutions
     def _createFullGrid(self, size: tuple[int]):
        
-        self.setBoard(Board.Board((9, 9)))
+        self.createEmptyBoard(size)
         grid = self.getBoard().getGrid()
 
         unvisitedPositions = getUnfilledPositions(grid)
-        testIndex = 0
+        #While we can still try positions. 
         while len(unvisitedPositions) > 0:
-            print("i: " + str(testIndex))
-
+            #Select a random position
             index = random.randint(0, len(unvisitedPositions) - 1)
             pos = unvisitedPositions[index]
+            
             availableMoves = getValidCellValues(grid, pos)
 
+            #Try all available values for this random position
             while len(availableMoves) > 0:
                 i = random.randint(0, len(availableMoves) - 1)
                 grid[pos[0]][pos[1]] = createCell(availableMoves[i])
@@ -188,51 +221,60 @@ class Sudoku:
                     #The added value still produces a solution, so I do not want to change this value.
                     break
                 
+                #The grid no longer produces a solution -> we have to backtrack.
                 grid[pos[0]][pos[1]] = None
                 availableMoves.pop(i)
                 
             unvisitedPositions.pop(index)
-
-            testIndex += 1
+        #NOTE: Automatically adjusts the pointers, so setting the board to this grid is redundant
         #board.setBoard(grid)
         return grid
 
 
     #The goal of this method is to take a full, or near full, grid and to unfill in numbers such that a 
-    #unique number still exists
+    #unique solution still exists
+    #Inspired by https://stackoverflow.com/questions/6924216/how-to-generate-sudoku-boards-with-unique-solutions
     def _trim(self):
         
         grid = self.getBoard().getGrid()
 
         emptyBoard = Board.Board((len(grid), len(grid[0]))) 
         cellPos = getUnfilledPositions(emptyBoard.getGrid())
-        flag = 0
+
+
+        #While we have not tried removing all values
         while len(cellPos) > 0:
-            print(flag); flag += 1
+            #The index that we want to remove a value from.
             i = random.randint(0, len(cellPos) - 1)
+            #The position in grid of the value we want to try to remove
             pos = cellPos.pop(i)
+
             cell = grid[pos[0]][pos[1]]
             grid[pos[0]][pos[1]] = None
             
+            #If removing the value results in a non unique grid, then we want to readd it
             if not self._isUnique():
                 grid[pos[0]][pos[1]] = cell
         
         #self.getBoard().setGrid(grid)
-        print(self.getBoard().getGrid())
         return grid
         
-
+    #Saves the grid to a file. 
+    #BUG: Does not save locked/unlocked values. Locked/Unlocked values were added after save/load.
     def save(self, fileName : str):
         grid = self.getBoard().getGrid()
 
+        #Opens and closes the file when finished
         with open(fileName, 'w') as f:
-
-
+        
             for i in range(0, len(grid)):
                 for j in range(0, len(grid[i])):
+                    #We want to add a space inbetween values to make the saved grid 'pretty'
                     if not j == 0:
                         f.write(' ')
 
+                    #Replace 'None' with 0 in order to write a one digit number to the save. 
+                    #Makes loading much easier
                     if grid[i][j] == None:
                         valToWrite = str(0)
                     else:
@@ -240,20 +282,24 @@ class Sudoku:
                     
                     f.write(valToWrite)
                 f.write('\n')
-        
+    #Loads the current grid with the saved grid
+    #BUG: Automatically assumes all cells were locked. 
     def load(self, fileName : str):
         board = Board.Board()
         grid = []
-        #I need to construct a grid here from the text file.
+
+        #Opens and closes the file when finished
         with open(fileName, 'r') as f:
             readRow = f.readline()
-                        
+            #Iterate over the row, adding all values into an array, which will act as the row. 
             while not readRow == '':
                 row = []
 
                 for i in range(0, len(readRow)):
                     if readRow[i].isdigit():
+                        #Read the number
                         num = int(readRow[i])
+                        #0 represents a None value.
                         if num == 0:
                             row.append(None)
                         else:
